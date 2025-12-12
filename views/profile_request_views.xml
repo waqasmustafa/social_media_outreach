@@ -1,18 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo>
 
-    <!-- Tree (list) view -->
-    <record id="view_ai_profile_request_tree" model="ir.ui.view">
-        <field name="name">ai.profile.request.tree</field>
+    <!-- List view -->
+    <record id="view_ai_profile_request_list" model="ir.ui.view">
+        <field name="name">ai.profile.request.list</field>
         <field name="model">ai.profile.request</field>
         <field name="arch" type="xml">
-            <tree string="Social Media Outreach">
+            <list string="Social Media Outreach">
                 <field name="name"/>
                 <field name="profile_url"/>
                 <field name="last_profile_name"/>
                 <field name="status"/>
                 <field name="last_sent_at"/>
-            </tree>
+            </list>
         </field>
     </record>
 
