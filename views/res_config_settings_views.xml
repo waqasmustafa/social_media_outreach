@@ -19,6 +19,15 @@
                                    placeholder="Assistant ID (e.g. asst_xxx)"
                                    class="col-6"/>
                         </div>
+                        <div class="row mt16">
+                            <div class="col-12">
+                                <button name="action_test_assistant_connection"
+                                        string="Test Connection"
+                                        type="object"
+                                        icon="fa-plug"
+                                        class="btn btn-secondary"/>
+                            </div>
+                        </div>
                     </setting>
 
                     <setting string="Assistant Settings"
