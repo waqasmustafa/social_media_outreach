@@ -28,7 +28,7 @@
                             type="object"
                             string="Send to AI Assistant"
                             class="btn-primary"
-                            attrs="{'invisible': [('status', '=', 'sending')]}"/>
+                            invisible="status == 'sending'"/>
                     <field name="status" widget="statusbar"/>
                 </header>
 
