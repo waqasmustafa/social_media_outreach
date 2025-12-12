@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <!-- Tree (list) view -->
+    <record id="view_ai_profile_request_tree" model="ir.ui.view">
+        <field name="name">ai.profile.request.tree</field>
+        <field name="model">ai.profile.request</field>
+        <field name="arch" type="xml">
+            <tree string="Social Media Outreach">
+                <field name="name"/>
+                <field name="profile_url"/>
+                <field name="last_profile_name"/>
+                <field name="status"/>
+                <field name="last_sent_at"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Form view -->
+    <record id="view_ai_profile_request_form" model="ir.ui.view">
+        <field name="name">ai.profile.request.form</field>
+        <field name="model">ai.profile.request</field>
+        <field name="arch" type="xml">
+            <form string="Social Media Outreach">
+
+                <header>
+                    <button name="action_send_now"
+                            type="object"
+                            string="Send to AI Assistant"
+                            class="btn-primary"
+                            attrs="{'invisible': [('status', '=', 'sending')]}"/>
+                    <field name="status" widget="statusbar"/>
+                </header>
+
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="profile_url" 
+                                   placeholder="Paste social media profile URL here..."
+                                   string="Profile URL"/>
+                        </group>
+                        <group>
+                            <field name="profile_image" 
+                                   widget="image"
+                                   string="Profile Image"/>
+                        </group>
+                    </group>
+
+                    <group string="Last Response">
+                        <group>
+                            <field name="last_profile_name" readonly="1"/>
+                            <field name="last_response_status" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="last_sent_at" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page string="Logs">
+                            <field name="log_ids" nolabel="1">
+                                <list create="0" edit="0" delete="0">
+                                    <field name="profile_name"/>
+                                    <field name="profile_url"/>
+                                    <field name="status"/>
+                                    <field name="message"/>
+                                    <field name="sent_at"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_ai_profile_request" model="ir.actions.act_window">
+        <field name="name">Social Media Outreach</field>
+        <field name="res_model">ai.profile.request</field>
+        <field name="view_mode">form,list</field>
+        <field name="help" type="html">
+            <p>
+                Use this screen to send social media profile URLs (and optional images)
+                to the AI Assistant and track responses.
+            </p>
+        </field>
+    </record>
+
+    <!-- Menu (top level) -->
+    <menuitem id="menu_social_media_outreach_root"
+              name="Social Media Outreach"
+              action="action_ai_profile_request"
+              sequence="50"
+              web_icon="social_media_outreach,static/description/icon.png"/>
+    
+    <!-- Settings Menu -->
+    <record id="action_social_media_outreach_settings" model="ir.actions.act_window">
+        <field name="name">Settings</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="res_model">res.config.settings</field>
+        <field name="view_mode">form</field>
+        <field name="target">inline</field>
+        <field name="context">{'module': 'social_media_outreach'}</field>
+    </record>
+
+    <menuitem id="menu_social_media_outreach_settings"
+              name="Settings"
+              parent="menu_social_media_outreach_root"
+              action="action_social_media_outreach_settings"
+              sequence="100"/>
+</odoo>

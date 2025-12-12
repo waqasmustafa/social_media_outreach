@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="view_res_config_settings_social_media_outreach" model="ir.ui.view">
+        <field name="name">res.config.settings.social.media.outreach</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="base.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//block[@id='user_default_rights']" position="before">
+                <block title="AI Assistant Connector" id="social_media_outreach_block">
+
+                    <setting string="API Configuration"
+                             help="Configure OpenAI Assistant API credentials.">
+                        <div class="row">
+                            <field name="assistant_openai_api_key"
+                                   password="True"
+                                   placeholder="OpenAI API Key"
+                                   class="col-6"/>
+                            <field name="assistant_id"
+                                   placeholder="Assistant ID (e.g. asst_xxx)"
+                                   class="col-6"/>
+                        </div>
+                    </setting>
+
+                    <setting string="Assistant Settings"
+                             help="Configure model and API endpoint.">
+                        <div class="row">
+                            <field name="assistant_model"
+                                   placeholder="gpt-5.1"
+                                   class="col-6"/>
+                            <field name="assistant_api_base"
+                                   placeholder="https://api.openai.com/v1"
+                                   class="col-6"/>
+                        </div>
+                    </setting>
+
+                </block>
+            </xpath>
+        </field>
+    </record>
+</odoo>
