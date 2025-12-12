@@ -1,6 +1,4 @@
-import requests
-from odoo import api, fields, models, _
-from odoo.exceptions import UserError
+from odoo import api, fields, models
 
 
 class ResConfigSettings(models.TransientModel):
@@ -65,65 +63,3 @@ class ResConfigSettings(models.TransientModel):
             "social_media_outreach.assistant_api_base",
             self.assistant_api_base or "https://api.openai.com/v1",
         )
-
-    def action_test_connection(self):
-        """
-        Test OpenAI Assistant connection and save settings if successful.
-        """
-        self.ensure_one()
-
-        # Validate required fields
-        if not self.assistant_openai_api_key:
-            raise UserError(_("Please enter the OpenAI API Key before testing."))
-        if not self.assistant_id:
-            raise UserError(_("Please enter the Assistant ID before testing."))
-
-        api_base = self.assistant_api_base or "https://api.openai.com/v1"
-        
-        # Test connection by retrieving assistant details
-        headers = {
-            "Authorization": f"Bearer {self.assistant_openai_api_key}",
-            "Content-Type": "application/json",
-            "OpenAI-Beta": "assistants=v2",
-        }
-
-        try:
-            # Try to retrieve the assistant to verify credentials
-            assistant_url = f"{api_base.rstrip('/')}/assistants/{self.assistant_id}"
-            response = requests.get(assistant_url, headers=headers, timeout=10)
-
-            if response.status_code == 200:
-                assistant_data = response.json()
-                assistant_name = assistant_data.get("name", "Unknown")
-                
-                # Save settings on successful connection
-                self.set_values()
-                
-                return {
-                    'type': 'ir.actions.client',
-                    'tag': 'display_notification',
-                    'params': {
-                        'title': _('Connection Successful!'),
-                        'message': _(
-                            f'Successfully connected to Assistant: {assistant_name}\n'
-                            f'Settings have been saved.'
-                        ),
-                        'type': 'success',
-                        'sticky': False,
-                    }
-                }
-            elif response.status_code == 401:
-                raise UserError(_("Invalid API Key. Please check your credentials."))
-            elif response.status_code == 404:
-                raise UserError(_("Assistant ID not found. Please verify the ID."))
-            else:
-                raise UserError(
-                    _("Connection failed with status %s: %s") 
-                    % (response.status_code, response.text)
-                )
-
-        except requests.exceptions.Timeout:
-            raise UserError(_("Connection timeout. Please check your network or API endpoint."))
-        except requests.exceptions.RequestException as e:
-            raise UserError(_("Connection error: %s") % str(e))
-
