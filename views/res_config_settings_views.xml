@@ -5,61 +5,36 @@
         <field name="model">res.config.settings</field>
         <field name="inherit_id" ref="base.res_config_settings_view_form"/>
         <field name="arch" type="xml">
-            <xpath expr="//div[@id='settings']" position="inside">
-                <div class="app_settings_block" data-string="AI Assistant Connector" string="AI Assistant Connector" data-key="social_media_outreach">
-                    <h2>AI Assistant Connector</h2>
-                    <div class="row mt16 o_settings_container">
-                        <div class="col-12 col-lg-6 o_setting_box">
-                            <div class="o_setting_left_pane"></div>
-                            <div class="o_setting_right_pane">
-                                <label string="API Configuration"/>
-                                <div class="text-muted">
-                                    Configure OpenAI Assistant API credentials
-                                </div>
-                                <div class="content-group mt16">
-                                    <div class="row">
-                                        <label for="assistant_openai_api_key" class="col-3 col-lg-3 o_light_label" string="API Key"/>
-                                        <field name="assistant_openai_api_key" password="True" placeholder="OpenAI API Key" class="col-9"/>
-                                    </div>
-                                    <div class="row">
-                                        <label for="assistant_id" class="col-3 col-lg-3 o_light_label" string="Assistant ID"/>
-                                        <field name="assistant_id" placeholder="e.g. asst_xxx" class="col-9"/>
-                                    </div>
-                                    <div class="row mt8">
-                                        <div class="col-12">
-                                            <button name="action_test_connection"
-                                                    string="Test Connection"
-                                                    type="object"
-                                                    icon="fa-plug"
-                                                    class="btn btn-secondary"/>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+            <xpath expr="//block[@id='user_default_rights']" position="before">
+                <block title="AI Assistant Connector" id="social_media_outreach_block">
+
+                    <setting string="API Configuration"
+                             help="Configure OpenAI Assistant API credentials.">
+                        <div class="row">
+                            <field name="assistant_openai_api_key"
+                                   password="True"
+                                   placeholder="OpenAI API Key"
+                                   class="col-6"/>
+                            <field name="assistant_id"
+                                   placeholder="Assistant ID (e.g. asst_xxx)"
+                                   class="col-6"/>
                         </div>
-                        <div class="col-12 col-lg-6 o_setting_box">
-                            <div class="o_setting_left_pane"></div>
-                            <div class="o_setting_right_pane">
-                                <label string="Assistant Settings"/>
-                                <div class="text-muted">
-                                    Configure model and API endpoint
-                                </div>
-                                <div class="content-group mt16">
-                                    <div class="row">
-                                        <label for="assistant_model" class="col-3 col-lg-3 o_light_label" string="Model"/>
-                                        <field name="assistant_model" placeholder="gpt-5.1" class="col-9"/>
-                                    </div>
-                                    <div class="row">
-                                        <label for="assistant_api_base" class="col-3 col-lg-3 o_light_label" string="API Base"/>
-                                        <field name="assistant_api_base" placeholder="https://api.openai.com/v1" class="col-9"/>
-                                    </div>
-                                </div>
-                            </div>
+                    </setting>
+
+                    <setting string="Assistant Settings"
+                             help="Configure model and API endpoint.">
+                        <div class="row">
+                            <field name="assistant_model"
+                                   placeholder="gpt-5.1"
+                                   class="col-6"/>
+                            <field name="assistant_api_base"
+                                   placeholder="https://api.openai.com/v1"
+                                   class="col-6"/>
                         </div>
-                    </div>
-                </div>
+                    </setting>
+
+                </block>
             </xpath>
         </field>
     </record>
 </odoo>
-
