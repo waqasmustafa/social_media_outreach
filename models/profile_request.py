@@ -156,11 +156,17 @@ class AiProfileRequest(models.Model):
                 if parse_error:
                     log_message += f" | JSON parse error: {parse_error}"
 
+                # Extract brand if available
+                brand_name = ""
+                if isinstance(parsed_json, dict):
+                    brand_name = parsed_json.get("brand") or ""
+                
                 # Create log line
                 self.env["ai.profile.log"].create(
                     {
                         "request_id": record.id,
                         "profile_name": profile_name or "",
+                        "brand": brand_name,
                         "profile_url": record.profile_url,
                         "status": "success",
                         "message": log_message,
@@ -182,6 +188,7 @@ class AiProfileRequest(models.Model):
                     {
                         "request_id": record.id,
                         "profile_name": "",
+                        "brand": "",
                         "profile_url": record.profile_url,
                         "status": "failed",
                         "message": error_msg,
@@ -334,6 +341,9 @@ class AiProfileLog(models.Model):
     )
     profile_name = fields.Char(
         string="Profile Name",
+    )
+    brand = fields.Char(
+        string="Brand",
     )
     profile_url = fields.Char(
         string="Profile URL",
