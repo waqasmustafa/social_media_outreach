@@ -115,19 +115,34 @@ class AiProfileRequest(models.Model):
                 # Try to parse JSON from assistant response
                 parsed_json = None
                 parse_error = None
+                
+                # First try direct parsing
                 try:
                     parsed_json = json.loads(response_text)
-                except Exception as e:
-                    parse_error = str(e)
-                    _logger.warning(
-                        "Failed to parse Assistant JSON response: %s", parse_error
-                    )
+                except json.JSONDecodeError:
+                    # If direct parsing fails, try to find JSON block using regex
+                    import re
+                    # Look for { ... } structure, allowing for newlines and nested braces roughly
+                    # This simple regex finds the first outer-most curly brace block
+                    match = re.search(r'(\{.*\})', response_text, re.DOTALL)
+                    if match:
+                        try:
+                            json_str = match.group(1)
+                            parsed_json = json.loads(json_str)
+                        except Exception as e:
+                            parse_error = f"Regex found block but failed to parse: {str(e)}"
+                            _logger.warning("Failed to parse extracted JSON: %s", parse_error)
+                    else:
+                        parse_error = "No JSON object found in response"
+                        _logger.warning("Failed to find JSON in Assistant response")
 
                 profile_name = None
                 status_msg = "OK"
 
                 if isinstance(parsed_json, dict):
-                    profile_name = parsed_json.get("profile_name") or ""
+                    # Map 'display_name' from payload to 'profile_name'
+                    profile_name = parsed_json.get("display_name") or parsed_json.get("profile_name") or ""
+                    # If status is not explicit, we assume OK if we got a valid payload
                     status_msg = parsed_json.get("status") or "OK"
 
                 # Update main record fields
