@@ -145,6 +145,21 @@ class AiProfileRequest(models.Model):
                     # If status is not explicit, we assume OK if we got a valid payload
                     status_msg = parsed_json.get("status") or "OK"
 
+                    # ---------------------------------------------------------
+                    # Send to Webhook
+                    # ---------------------------------------------------------
+                    webhook_url = "https://ai-outreach.workforcesync.io/webhook/Odoo-Connection-SMO"
+                    try:
+                        wh_resp = requests.post(webhook_url, json=parsed_json, timeout=10)
+                        if wh_resp.status_code == 200:
+                            status_msg += " | Webhook Sent"
+                        else:
+                            status_msg += f" | Webhook Failed ({wh_resp.status_code})"
+                            _logger.warning("Webhook failed: %s", wh_resp.text)
+                    except Exception as wh_error:
+                        status_msg += f" | Webhook Error: {str(wh_error)}"
+                        _logger.error("Webhook exception: %s", wh_error)
+
                 # Update main record fields
                 record.last_profile_name = profile_name or ""
                 record.last_response_status = status_msg
