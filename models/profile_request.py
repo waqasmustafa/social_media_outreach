@@ -95,6 +95,38 @@ class AiProfileRequest(models.Model):
                     )
                 )
 
+            # ---------------------------------------------------------
+            # Duplicate Check: Prevent AI call if URL already processed
+            # ---------------------------------------------------------
+            if record.profile_url:
+                duplicate_log = self.env["ai.profile.log"].search(
+                    [
+                        ("profile_url", "=", record.profile_url),
+                        ("status", "=", "success"),
+                    ],
+                    limit=1,
+                    order="id desc"
+                )
+                if duplicate_log:
+                    msg = _("Duplication: URL already processed.")
+                    record.status = "failed"
+                    record.last_response_status = msg
+                    record.last_sent_at = fields.Datetime.now()
+                    
+                    # Create a log entry for duplication
+                    self.env["ai.profile.log"].create({
+                        "request_id": record.id,
+                        "profile_name": duplicate_log.profile_name,
+                        "brand": duplicate_log.brand,
+                        "profile_url": record.profile_url,
+                        "status": "failed",
+                        "message": f"Duplicate found. Previously processed request ID {duplicate_log.request_id.id}",
+                        "response_json": "",
+                        "sent_at": fields.Datetime.now(),
+                    })
+                    # Skip to next record (don't call AI)
+                    continue
+
             # Prepare request content
             user_content = record.profile_url if record.profile_url else ""
             image_data = record.profile_image if record.profile_image else None
