@@ -22,13 +22,19 @@ class AiProfileRequest(models.Model):
     )
     profile_url = fields.Char(
         string="Profile URL",
-        required=True,
+        required=False,
         help="Paste the social media profile URL (e.g. Instagram, TikTok, etc.).",
     )
     profile_image = fields.Binary(
         string="Profile Image",
-        help="Optional profile image (if URL is not enough). Currently only logged, not sent as file.",
+        help="Profile image to analyze (e.g. Screenshot).",
     )
+
+    @api.constrains('profile_url', 'profile_image')
+    def _check_url_or_image(self):
+        for record in self:
+            if not record.profile_url and not record.profile_image:
+                raise UserError(_("Please provide either a Profile URL or a Profile Image."))
 
     status = fields.Selection(
         [
@@ -70,9 +76,6 @@ class AiProfileRequest(models.Model):
         Logs the response and updates status fields.
         """
         for record in self:
-            if not record.profile_url:
-                raise UserError(_("Please provide a Profile URL before sending."))
-
             # Load configuration
             IrConfig = self.env["ir.config_parameter"].sudo()
             api_key = IrConfig.get_param(
@@ -92,24 +95,16 @@ class AiProfileRequest(models.Model):
                     )
                 )
 
-            # Prepare request content for the Assistant
-            # NOTE: Right now we are sending only URL in text.
-            # Image is not being sent as a file to OpenAI in this version.
-            user_content = f"Social media profile URL: {record.profile_url}\n"
-            if record.profile_image:
-                user_content += (
-                    "A profile image is also available in Odoo for this record.\n"
-                )
+            # Prepare request content
+            user_content = record.profile_url if record.profile_url else ""
+            image_data = record.profile_image if record.profile_image else None
 
             record.status = "sending"
             self.env.cr.commit()  # Commit status change so user sees it immediately
 
             try:
                 response_text = record._call_openai_assistant(
-                    api_base=api_base,
-                    api_key=api_key,
-                    assistant_id=assistant_id,
-                    user_content=user_content,
+                    api_base, api_key, assistant_id, user_content, image_data=image_data
                 )
 
                 # Try to parse JSON from assistant response
@@ -224,16 +219,10 @@ class AiProfileRequest(models.Model):
                     )
                 )
 
-    def _call_openai_assistant(self, api_base, api_key, assistant_id, user_content):
+    def _call_openai_assistant(self, api_base, api_key, assistant_id, user_content, image_data=None):
         """
-        Low-level helper to call OpenAI Assistants API (v2-style) using HTTP.
-        - Creates a thread
-        - Adds the user message
-        - Starts a run
-        - Polls until completion
-        - Retrieves the latest assistant message text
-
-        Returns: assistant message text (string)
+        Interacts with OpenAI Assistant API (v2) with Threads.
+        Supports both text (URL) and image inputs.
         """
         headers = {
             "Authorization": f"Bearer {api_key}",
@@ -241,18 +230,69 @@ class AiProfileRequest(models.Model):
             "OpenAI-Beta": "assistants=v2",
         }
 
-        # 1) Create a thread with initial user message
+        # ---------------------------------------------------------
+        # 0. Upload File if image_data exists
+        # ---------------------------------------------------------
+        message_content = []
+        
+        # Add Text Content (URL) if available
+        if user_content:
+            message_content.append({
+                "type": "text",
+                "text": f"Social media profile URL: {user_content}\n"
+            })
+        elif not image_data:
+             # Fallback if somehow both are missing (though constrained)
+             message_content.append({
+                "type": "text",
+                "text": "Please analyze this profile."
+            })
+
+        if image_data:
+             # Upload file to OpenAI
+            try:
+                import base64
+                file_bytes = base64.b64decode(image_data)
+                
+                # We use requests directly for multipart upload without JSON header
+                upload_url = f"{api_base.rstrip('/')}/files"
+                files = {
+                    'file': ('profile_screenshot.png', file_bytes, 'image/png'),
+                    'purpose': (None, 'vision'),
+                }
+                upload_headers = {
+                    "Authorization": f"Bearer {api_key}",
+                    "OpenAI-Beta": "assistants=v2", 
+                }
+                
+                upload_resp = requests.post(upload_url, headers=upload_headers, files=files)
+                if upload_resp.status_code >= 400:
+                    raise Exception(f"Image upload failed: {upload_resp.text}")
+                
+                file_id = upload_resp.json().get("id")
+                
+                message_content.append({
+                    "type": "image_file",
+                    "image_file": {"file_id": file_id}
+                })
+            except Exception as e:
+                raise UserError(f"Error preparing image for analysis: {str(e)}")
+
+        # ---------------------------------------------------------
+        # 1. Create a Thread with Initial Message
+        # ---------------------------------------------------------
         thread_payload = {
             "messages": [
                 {
                     "role": "user",
-                    "content": user_content,
+                    "content": message_content
                 }
             ]
         }
-
+        
         thread_url = f"{api_base.rstrip('/')}/threads"
         thread_resp = requests.post(thread_url, headers=headers, json=thread_payload)
+        
         if thread_resp.status_code >= 400:
             raise UserError(
                 _(
