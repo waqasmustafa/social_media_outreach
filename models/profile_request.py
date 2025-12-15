@@ -95,38 +95,6 @@ class AiProfileRequest(models.Model):
                     )
                 )
 
-            # ---------------------------------------------------------
-            # Duplicate Check: Prevent AI call if URL already processed
-            # ---------------------------------------------------------
-            if record.profile_url:
-                duplicate_log = self.env["ai.profile.log"].search(
-                    [
-                        ("profile_url", "=", record.profile_url),
-                        ("status", "=", "success"),
-                    ],
-                    limit=1,
-                    order="id desc"
-                )
-                if duplicate_log:
-                    msg = _("Duplication: URL already processed.")
-                    record.status = "failed"
-                    record.last_response_status = msg
-                    record.last_sent_at = fields.Datetime.now()
-                    
-                    # Create a log entry for duplication
-                    self.env["ai.profile.log"].create({
-                        "request_id": record.id,
-                        "profile_name": duplicate_log.profile_name,
-                        "brand": duplicate_log.brand,
-                        "profile_url": record.profile_url,
-                        "status": "failed",
-                        "message": f"Duplicate found. Previously processed request ID {duplicate_log.request_id.id}",
-                        "response_json": "",
-                        "sent_at": fields.Datetime.now(),
-                    })
-                    # Skip to next record (don't call AI)
-                    continue
-
             # Prepare request content
             user_content = record.profile_url if record.profile_url else ""
             image_data = record.profile_image if record.profile_image else None
@@ -178,10 +146,20 @@ class AiProfileRequest(models.Model):
                     webhook_url = IrConfig.get_param("social_media_outreach.webhook_url")
                     if webhook_url:
                         try:
-                            # Using GET request with query parameters
-                            wh_resp = requests.get(webhook_url, params=parsed_json, timeout=10)
+                            # increased timeout to 20s for synchronous processing
+                            wh_resp = requests.get(webhook_url, params=parsed_json, timeout=20)
                             if wh_resp.status_code == 200:
-                                status_msg += " | Webhook Sent"
+                                # Capture the actual response from n8n (Respond to Webhook Node)
+                                try:
+                                    n8n_data = wh_resp.json()
+                                    # If it's a dict, maybe show a specific field or dump it safely
+                                    # For now, let's dump it as string or take a message field
+                                    wh_msg = str(n8n_data)
+                                except:
+                                    # If not JSON, take raw text
+                                    wh_msg = wh_resp.text
+                                
+                                status_msg += f" | {wh_msg}"
                             else:
                                 status_msg += f" | Webhook Failed ({wh_resp.status_code})"
                                 _logger.warning("Webhook failed: %s", wh_resp.text)
