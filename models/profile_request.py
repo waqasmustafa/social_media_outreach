@@ -148,17 +148,22 @@ class AiProfileRequest(models.Model):
                     # ---------------------------------------------------------
                     # Send to Webhook
                     # ---------------------------------------------------------
-                    webhook_url = "https://ai-outreach.workforcesync.io/webhook/Odoo-Connection-SMO"
-                    try:
-                        wh_resp = requests.post(webhook_url, json=parsed_json, timeout=10)
-                        if wh_resp.status_code == 200:
-                            status_msg += " | Webhook Sent"
-                        else:
-                            status_msg += f" | Webhook Failed ({wh_resp.status_code})"
-                            _logger.warning("Webhook failed: %s", wh_resp.text)
-                    except Exception as wh_error:
-                        status_msg += f" | Webhook Error: {str(wh_error)}"
-                        _logger.error("Webhook exception: %s", wh_error)
+                    webhook_url = IrConfig.get_param("social_media_outreach.webhook_url")
+                    if webhook_url:
+                        try:
+                            # Using GET request with query parameters
+                            wh_resp = requests.get(webhook_url, params=parsed_json, timeout=10)
+                            if wh_resp.status_code == 200:
+                                status_msg += " | Webhook Sent"
+                            else:
+                                status_msg += f" | Webhook Failed ({wh_resp.status_code})"
+                                _logger.warning("Webhook failed: %s", wh_resp.text)
+                        except Exception as wh_error:
+                            status_msg += f" | Webhook Error: {str(wh_error)}"
+                            _logger.error("Webhook exception: %s", wh_error)
+                    else:
+                        # Log that no webhook URL is configured, but don't treat as error
+                        _logger.info("No webhook URL configured, skipping webhook.")
 
                 # Update main record fields
                 record.last_profile_name = profile_name or ""

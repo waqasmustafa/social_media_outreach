@@ -22,6 +22,10 @@ class ResConfigSettings(models.TransientModel):
         default="https://api.openai.com/v1",
         help="Base URL for the OpenAI API. Leave default unless using a custom endpoint.",
     )
+    social_media_outreach_webhook_url = fields.Char(
+        string="Webhook URL",
+        help="URL where the parsed JSON data will be sent (e.g. n8n webhook).",
+    )
 
     @api.model
     def get_values(self):
@@ -40,6 +44,9 @@ class ResConfigSettings(models.TransientModel):
             assistant_api_base=IrConfig.get_param(
                 "social_media_outreach.assistant_api_base",
                 default="https://api.openai.com/v1",
+            ),
+            social_media_outreach_webhook_url=IrConfig.get_param(
+                "social_media_outreach.webhook_url", default=""
             ),
         )
         return res
@@ -62,6 +69,10 @@ class ResConfigSettings(models.TransientModel):
         IrConfig.set_param(
             "social_media_outreach.assistant_api_base",
             self.assistant_api_base or "https://api.openai.com/v1",
+        )
+        IrConfig.set_param(
+            "social_media_outreach.webhook_url",
+            self.social_media_outreach_webhook_url or "",
         )
 
     def action_test_assistant_connection(self):

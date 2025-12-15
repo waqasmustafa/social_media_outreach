@@ -40,6 +40,11 @@
                                    placeholder="https://api.openai.com/v1"
                                    class="col-6"/>
                         </div>
+                        <div class="row mt16">
+                            <field name="social_media_outreach_webhook_url"
+                                   placeholder="https://your-webhook-url.com"
+                                   class="col-12"/>
+                        </div>
                     </setting>
 
                 </block>
