@@ -171,18 +171,23 @@ class AiProfileRequest(models.Model):
                 if parse_error:
                     log_message += f" | JSON parse error: {parse_error}"
 
-                # Extract brand if available
+                # Extract brand and profile_url if available
                 brand_name = ""
+                extracted_url = ""
                 if isinstance(parsed_json, dict):
                     brand_name = parsed_json.get("brand") or ""
+                    extracted_url = parsed_json.get("profile_url") or ""
                 
+                # Use record URL or AI extracted URL
+                final_url = record.profile_url or extracted_url
+
                 # Create log line
                 self.env["ai.profile.log"].create(
                     {
                         "request_id": record.id,
                         "profile_name": profile_name or "",
                         "brand": brand_name,
-                        "profile_url": record.profile_url,
+                        "profile_url": final_url,
                         "status": "success",
                         "message": log_message,
                         "response_json": response_text,
