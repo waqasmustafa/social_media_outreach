@@ -41,6 +41,37 @@ class AiProfileRequest(models.Model):
             if record.image_ids and len(record.image_ids) > 3:
                 raise UserError(_("You can upload a maximum of 3 images."))
 
+    @api.model
+    def cron_delete_old_images(self):
+        """
+        Scheduled Action to delete images older than 24 hours
+        from ai.profile.request records to save storage.
+        """
+        from datetime import datetime, timedelta
+        import logging
+        _logger = logging.getLogger(__name__)
+
+        # Calculate time threshold (24 hours ago)
+        threshold = datetime.now() - timedelta(hours=24)
+        
+        # Search for requests that have images
+        # We search for all, then filter images. 
+        # Optimized: search for requests where write_date or create_date is older than 24h might be safer 
+        # but images track their own create_date.
+        requests_with_images = self.search([('image_ids', '!=', False)])
+        
+        count = 0
+        for req in requests_with_images:
+            # check images inside this request
+            # We strictly check 'create_date' of the attachment
+            images_to_delete = req.image_ids.filtered(lambda img: img.create_date < threshold)
+            if images_to_delete:
+                count += len(images_to_delete)
+                images_to_delete.unlink()
+        
+        if count > 0:
+            _logger.info(f"Social Media Outreach: Cleaned up {count} old profile images.")
+
     status = fields.Selection(
         [
             ("draft", "Draft"),

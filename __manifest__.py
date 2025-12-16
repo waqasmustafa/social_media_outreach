@@ -7,8 +7,9 @@
     "depends": ["base"],
     "data": [
         "security/ir.model.access.csv",
-        "views/res_config_settings_views.xml",
+        "data/ir_cron.xml",
         "views/profile_request_views.xml",
+        "views/res_config_settings_views.xml",
     ],
     "assets": {},
     "installable": True,
