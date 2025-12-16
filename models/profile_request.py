@@ -25,16 +25,21 @@ class AiProfileRequest(models.Model):
         required=False,
         help="Paste the social media profile URL (e.g. Instagram, TikTok, etc.).",
     )
-    profile_image = fields.Binary(
-        string="Profile Image",
-        help="Profile image to analyze (e.g. Screenshot).",
+    image_ids = fields.Many2many(
+        "ir.attachment",
+        string="Profile Images",
+        help="Upload one or more profile screenshots (max 3 recommended).",
     )
 
-    @api.constrains('profile_url', 'profile_image')
+    @api.constrains('profile_url', 'image_ids')
     def _check_url_or_image(self):
         for record in self:
-            if not record.profile_url and not record.profile_image:
-                raise UserError(_("Please provide either a Profile URL or a Profile Image."))
+            if not record.profile_url:
+                if not record.image_ids:
+                    raise UserError(_("Please provide either a Profile URL or Profile Images."))
+                
+            if record.image_ids and len(record.image_ids) > 3:
+                raise UserError(_("You can upload a maximum of 3 images."))
 
     status = fields.Selection(
         [
@@ -234,10 +239,10 @@ class AiProfileRequest(models.Model):
                     )
                 )
 
-    def _call_openai_assistant(self, api_base, api_key, assistant_id, user_content, image_data=None):
+    def _call_openai_assistant(self, api_base, api_key, assistant_id, user_content, images=None):
         """
         Interacts with OpenAI Assistant API (v2) with Threads.
-        Supports both text (URL) and image inputs.
+        Supports both text (URL) and MULTIPLE image inputs.
         """
         headers = {
             "Authorization": f"Bearer {api_key}",
@@ -246,7 +251,7 @@ class AiProfileRequest(models.Model):
         }
 
         # ---------------------------------------------------------
-        # 0. Upload File if image_data exists
+        # 0. Upload Files if images exist
         # ---------------------------------------------------------
         message_content = []
         
@@ -256,42 +261,43 @@ class AiProfileRequest(models.Model):
                 "type": "text",
                 "text": f"Social media profile URL: {user_content}\n"
             })
-        elif not image_data:
-             # Fallback if somehow both are missing (though constrained)
+        elif not images:
+             # Fallback if somehow both are missing
              message_content.append({
                 "type": "text",
                 "text": "Please analyze this profile."
             })
 
-        if image_data:
-             # Upload file to OpenAI
-            try:
-                import base64
-                file_bytes = base64.b64decode(image_data)
-                
-                # We use requests directly for multipart upload without JSON header
-                upload_url = f"{api_base.rstrip('/')}/files"
-                files = {
-                    'file': ('profile_screenshot.png', file_bytes, 'image/png'),
-                    'purpose': (None, 'vision'),
-                }
-                upload_headers = {
-                    "Authorization": f"Bearer {api_key}",
-                    "OpenAI-Beta": "assistants=v2", 
-                }
-                
-                upload_resp = requests.post(upload_url, headers=upload_headers, files=files)
-                if upload_resp.status_code >= 400:
-                    raise Exception(f"Image upload failed: {upload_resp.text}")
-                
-                file_id = upload_resp.json().get("id")
-                
-                message_content.append({
-                    "type": "image_file",
-                    "image_file": {"file_id": file_id}
-                })
-            except Exception as e:
-                raise UserError(f"Error preparing image for analysis: {str(e)}")
+        if images:
+             # Loop through each image attachment
+             for img in images:
+                try:
+                    import base64
+                    # ir.attachment stores data in 'datas' field
+                    file_bytes = base64.b64decode(img.datas)
+                    
+                    upload_url = f"{api_base.rstrip('/')}/files"
+                    files = {
+                        'file': (img.name or 'screenshot.png', file_bytes, 'image/png'),
+                        'purpose': (None, 'vision'),
+                    }
+                    upload_headers = {
+                        "Authorization": f"Bearer {api_key}",
+                        "OpenAI-Beta": "assistants=v2", 
+                    }
+                    
+                    upload_resp = requests.post(upload_url, headers=upload_headers, files=files)
+                    if upload_resp.status_code >= 400:
+                        raise Exception(f"Image upload failed for {img.name}: {upload_resp.text}")
+                    
+                    file_id = upload_resp.json().get("id")
+                    
+                    message_content.append({
+                        "type": "image_file",
+                        "image_file": {"file_id": file_id}
+                    })
+                except Exception as e:
+                    raise UserError(f"Error uploading image {img.name}: {str(e)}")
 
         # ---------------------------------------------------------
         # 1. Create a Thread with Initial Message

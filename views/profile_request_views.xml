@@ -40,9 +40,9 @@
                                    string="Profile URL"/>
                         </group>
                         <group>
-                            <field name="profile_image" 
-                                   widget="image"
-                                   string="Profile Image"/>
+                            <field name="image_ids" 
+                                   widget="many2many_binary"
+                                   string="Profile Screenshots"/>
                         </group>
                     </group>
 
