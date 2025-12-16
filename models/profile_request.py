@@ -142,6 +142,12 @@ class AiProfileRequest(models.Model):
                 if isinstance(parsed_json, dict):
                     # Map 'display_name' from payload to 'profile_name'
                     profile_name = parsed_json.get("display_name") or parsed_json.get("profile_name") or ""
+                    
+                    # If we have a URL in the AI response and our record is empty, save it!
+                    extracted_url = parsed_json.get("profile_url")
+                    if not record.profile_url and extracted_url:
+                        record.profile_url = extracted_url
+                        
                     # If status is not explicit, we assume OK if we got a valid payload
                     status_msg = parsed_json.get("status") or "OK"
 
