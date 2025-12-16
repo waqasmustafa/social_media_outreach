@@ -102,14 +102,14 @@ class AiProfileRequest(models.Model):
 
             # Prepare request content
             user_content = record.profile_url if record.profile_url else ""
-            image_data = record.profile_image if record.profile_image else None
+            images = record.image_ids or None
 
             record.status = "sending"
             self.env.cr.commit()  # Commit status change so user sees it immediately
 
             try:
                 response_text = record._call_openai_assistant(
-                    api_base, api_key, assistant_id, user_content, image_data=image_data
+                    api_base, api_key, assistant_id, user_content, images=images
                 )
 
                 # Try to parse JSON from assistant response
